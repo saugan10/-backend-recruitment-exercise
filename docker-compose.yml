@@ -1,0 +1,101 @@
+version: '3.8'
+services:
+  localstack:
+    image: localstack/localstack:3.0
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=s3,dynamodb
+      - DEBUG=1
+      - AWS_DEFAULT_REGION=us-east-1  # Add for Boto3 compatibility
+    volumes:
+      - ./init-localstack.sh:/etc/localstack/init/ready.d/init-localstack.sh
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  pdf_service:
+    build: ./pdf_service
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./pdf_service/pdfs:/tmp
+    environment:
+      - DYNAMODB_ENDPOINT=http://localstack:4566
+      - S3_ENDPOINT=http://localstack:4566
+      - S3_BUCKET=my-pdf-bucket
+      - AWS_DEFAULT_REGION=us-east-1
+    depends_on:
+      localstack:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  rag_module:
+    build: ./rag_module
+    ports:
+      - "8001:8001"
+    environment:
+      - PINECONE_API_KEY=${PINECONE_API_KEY:-dummy}
+      - PINECONE_ENV=${PINECONE_ENV:-dummy}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-dummy}
+      - CHUNK_SIZE=500
+      - TOP_K=5
+      - METRICS_LAMBDA_URL=http://metrics_lambda:9000/metrics
+      - DYNAMODB_ENDPOINT=http://localstack:4566
+      - AWS_DEFAULT_REGION=us-east-1
+    depends_on:
+      localstack:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  aws_service:
+    build: ./aws_service
+    ports:
+      - "8002:8002"
+    environment:
+      - DYNAMODB_ENDPOINT=http://localstack:4566
+      - S3_ENDPOINT=http://localstack:4566
+      - S3_BUCKET=my-pdf-bucket
+      - AWS_DEFAULT_REGION=us-east-1
+    depends_on:
+      localstack:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  metrics_lambda:
+    build: ./metrics_lambda
+    ports:
+      - "9000:9000"
+    environment:
+      - DYNAMODB_ENDPOINT=http://localstack:4566
+      - METRICS_TABLE=AgentMetrics
+      - AWS_DEFAULT_REGION=us-east-1
+    depends_on:
+      localstack:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  streamlit:
+    build: ./streamlit
+    ports:
+      - "8501:8501"
+    environment:
+      - BACKEND_URL=http://aws_service:8002
+    depends_on:
+      aws_service:
+        condition: service_started  # Wait for aws_service to start
+    command: sh -c "sleep 20 && streamlit run app.py --server.port 8501 --server.address 0.0.0.0"  # Longer delay
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+langchain
+langgraph
+langchain-google-genai
+pypdf
+pinecone-client
+boto3
+requests

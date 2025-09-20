@@ -1,0 +1,25 @@
+# Virtual environment
+myenv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Streamlit secrets (API keys)
+.streamlit/secrets.toml
+
+# Temp files
+temp.pdf
+.DS_Store
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

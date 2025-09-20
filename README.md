@@ -128,7 +128,7 @@ License
 [Add a license here, e.g., MIT] - (Optional: Specify or remove this section based on your preference.)
 Acknowledgments
 
-Built with guidance from xAI's Grok.
+
 Utilizes open-source libraries from Hugging Face, LangChain, and Google.
 
 Contact
